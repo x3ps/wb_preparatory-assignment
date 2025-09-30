@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:18-alpine3.22
+    container_name: car_showroom_app-db
+    ports:
+      - "5432:5432"
+    env_file:
+      - ../.env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../migrations:/docker-entrypoint-initdb.d
+
+  server:
+    build:
+      context: ..
+      dockerfile: deploy/server.Dockerfile
+    container_name: car_showroom_app-server
+    depends_on:
+      - db
+    ports:
+      - "${APP_PORT}:8080"
+    env_file:
+      - ../.env
+
+volumes:
+  pgdata:
