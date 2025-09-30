@@ -12,6 +12,6 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/search", SearchCarsHandler)
 
-	log.Println("Server running at http://0.0.0.0:8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Println("Server running at http://0.0.0.0:5000")
+	log.Fatal(http.ListenAndServe(":5000", mux))
 }
