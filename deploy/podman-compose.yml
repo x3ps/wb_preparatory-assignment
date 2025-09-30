@@ -32,6 +32,15 @@ services:
       - "${APP_PORT}:8080"
     env_file:
       - .env
+  client:
+    build:
+      context: ../client
+      dockerfile: ../deploy/client.Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
+      - db
 
 volumes:
   pgdata:
