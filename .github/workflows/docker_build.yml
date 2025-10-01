@@ -1,0 +1,86 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+# Определяем переменные окружения для GitHub Container Registry (GHCR)
+env:
+  DOCKER_REGISTRY: ghcr.io
+  # Полное имя репозитория образов: ghcr.io/<owner>/<repo_name>
+  IMAGE_REPO: ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}
+
+jobs:
+  build-and-push:
+    # Запуск на последней версии Ubuntu
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # ОБЯЗАТЕЛЬНО для публикации в GitHub Container Registry
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # --- 1. Настройка инструментов Docker ---
+
+      - name: Set up QEMU (optional, for multi-platform build)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # --- 2. Авторизация в реестре (GHCR) ---
+      # Авторизация в GitHub Container Registry (GHCR) с помощью GITHUB_TOKEN
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ github.actor }} # Имя текущего пользователя, запустившего workflow
+          password: ${{ secrets.GITHUB_TOKEN }} # Стандартный токен GitHub Actions
+
+      # --- 3. Генерация тегов и лейблов ---
+      # Генерирует теги на основе ветки и SHA коммита.
+      - name: Extract metadata (tags, labels) for Docker images
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_REPO }}
+          # Определяем теги для образов: SHA, ветка/latest (для main)
+          tags: |
+            type=sha,prefix=${{ github.event_name == 'pull_request' && 'pr-' || '' }},format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      # --- 4. Сборка и публикация образа 'server' (Go) ---
+
+      - name: Build and push 'server' image
+        uses: docker/build-push-action@v5
+        with:
+          # Путь к контексту (корневая папка для COPY в Dockerfile)
+          context: ./server
+          # Путь к Dockerfile относительно корня репозитория
+          file: ./deploy/server.Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}-server
+          labels: ${{ steps.meta.outputs.labels }}
+          # Включаем кэширование
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # --- 5. Сборка и публикация образа 'client' (Bun/Nginx) ---
+
+      - name: Build and push 'client' image
+        uses: docker/build-push-action@v5
+        with:
+          # Путь к контексту
+          context: ./client
+          # Путь к Dockerfile относительно корня репозитория
+          file: ./deploy/client.Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}-client
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
