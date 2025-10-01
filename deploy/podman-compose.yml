@@ -35,10 +35,8 @@ services:
       context: ../client
       dockerfile: ../deploy/client.Dockerfile
     ports:
-      - "${APP_PORT}:8080"
-    depends_on:
-      db: service_healthy
-      server:
+      - "${APP_PORT_HTTP}:8080"
+    depends_on: server
     env_file:
       - .env
 
