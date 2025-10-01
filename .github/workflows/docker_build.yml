@@ -10,7 +10,8 @@ on:
 env:
   DOCKER_REGISTRY: ghcr.io
   # Полное имя репозитория образов: ghcr.io/<owner>/<repo_name>
-  IMAGE_REPO: ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}
+  # ИСПРАВЛЕНО: Прямое использование "ghcr.io/" для избежания ошибки парсинга на верхнем уровне.
+  IMAGE_REPO: ghcr.io/${{ github.repository }}
 
 jobs:
   build-and-push:
