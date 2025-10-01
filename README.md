@@ -162,5 +162,5 @@ test_data.sql
 
 * Данные предоставлены [Back4App](https://www.back4app.com/)
 * Иконка предоставлена [SVGRepo](https://www.svgrepo.com/)
-* Код проекта предоставляется под лицензией **[[CC BY 4.0](Unlicense](https://unlicense.org/)**
+* Код проекта предоставляется под лицензией **[Unlicense](https://unlicense.org/)**
 ---
