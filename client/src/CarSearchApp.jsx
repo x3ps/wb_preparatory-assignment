@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 
 export function CarSearchApp() {
   const [query, setQuery] = useState("");
@@ -7,82 +7,136 @@ export function CarSearchApp() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [hasSearched, setHasSearched] = useState(false);
+
   const searchCars = async () => {
-    if (!query) return;
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return;
+
+    setHasSearched(true);
     setLoading(true);
     setError("");
+    setCars([]);
+
+    const fetchUrl = `/api/search?q=${encodeURIComponent(trimmedQuery)}&field=${field}`;
+
     try {
-      const res = await fetch(
-        `/api/search?q=${encodeURIComponent(query)}&field=${field}`,
-      );
+      const res = await fetch(fetchUrl);
+
       if (!res.ok) {
-        throw new Error(await res.text());
+        throw new Error((await res.text()) || `Ошибка сети: ${res.status}`);
       }
-      const data = await res.json();
+
+      let data = await res.json();
+
+      if (!data) {
+        data = [];
+      }
+
+      if (!Array.isArray(data)) {
+        console.error("API response format error:", data);
+        throw new Error(
+          "Некорректный формат ответа от сервера. Ожидается массив.",
+        );
+      }
+
       setCars(data);
     } catch (err) {
-      setError(err.message);
+      setError(
+        err.message || "Не удалось выполнить поиск. Проверьте соединение.",
+      );
+      setCars([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && query.trim() && !loading) {
+      searchCars();
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 p-6 flex flex-col items-center">
-      <h1 className="text-2xl font-bold mb-6">🔍 Поиск автомобилей</h1>
+    <div className="app-container">
+      <h1 className="md-headline">🔍 Поиск автомобилей</h1>
 
-      <div className="flex gap-2 mb-6">
-        <select
-          value={field}
-          onChange={(e) => setField(e.target.value)}
-          className="border rounded p-2"
-        >
-          <option value="brand">Марка</option>
-          <option value="model">Модель</option>
-        </select>
+      <div className="search-card">
+        <div className="search-controls">
+          <div className="md-select-container">
+            <select
+              value={field}
+              onChange={(e) => setField(e.target.value)}
+              className="md-select"
+            >
+              <option value="brand">Марка</option>
+              <option value="model">Модель</option>
+            </select>
+          </div>
 
-        <input
-          type="text"
-          placeholder="Введите запрос..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="border rounded p-2"
-        />
+          <div className="md-input-container">
+            <input
+              type="text"
+              placeholder="Введите запрос..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="md-input"
+            />
+            <label className="md-input-label">Поиск</label>
+          </div>
+        </div>
 
         <button
           onClick={searchCars}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="md-button md-button-filled"
+          // Кнопка отключена, если идет загрузка или запрос пуст
+          disabled={loading || !query.trim()}
         >
-          Искать
+          {loading ? "Поиск..." : "Искать"}
         </button>
       </div>
 
-      {loading && <p>Загрузка...</p>}
-      {error && <p className="text-red-600">{error}</p>}
+      {/* Отображение ошибки: сработает при 400, 500 или ошибке сети */}
+      {error && <p className="md-error-message">Ошибка: {error}</p>}
 
+      {/* Отображение результатов */}
       {cars.length > 0 && (
-        <table className="border-collapse border border-gray-400 w-full max-w-3xl bg-white shadow">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="border border-gray-300 p-2">Марка</th>
-              <th className="border border-gray-300 p-2">Модель</th>
-              <th className="border border-gray-300 p-2">Год</th>
-              <th className="border border-gray-300 p-2">Цена (тыс.$)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cars.map((car, idx) => (
-              <tr key={idx} className="hover:bg-gray-100">
-                <td className="border border-gray-300 p-2">{car.brand}</td>
-                <td className="border border-gray-300 p-2">{car.model}</td>
-                <td className="border border-gray-300 p-2">{car.year}</td>
-                <td className="border border-gray-300 p-2">
-                  {car.price_thousands}
-                </td>
+        <div className="md-data-table-container">
+          <table className="md-data-table">
+            <thead>
+              <tr>
+                <th>Марка</th>
+                <th>Модель</th>
+                <th>Год</th>
+                <th>Цена (тыс.₽)</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {cars.map((car, idx) => (
+                <tr key={idx} className="md-table-row">
+                  <td>{car.brand}</td>
+                  <td>{car.model}</td>
+                  <td>{car.year}</td>
+                  <td>{car.price_thousands}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {hasSearched && cars.length === 0 && !loading && !error && (
+        <p className="md-info-message">
+          Нет результатов, удовлетворяющих вашему запросу.
+        </p>
+      )}
+
+      {!hasSearched && !loading && !error && (
+        <p className="md-info-message">
+          Введите марку или модель автомобиля в поле выше и нажмите{" "}
+          <b>Искать</b> или <b>Enter</b>, чтобы увидеть список доступных машин.
+        </p>
       )}
     </div>
   );

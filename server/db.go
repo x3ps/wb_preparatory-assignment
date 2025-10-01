@@ -26,11 +26,13 @@ func InitDB() {
 	var err error
 	DB, err = sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatalf("Ошибка подключения к БД: %v", err)
+		// Используем Fatalf, чтобы остановить программу, если подключение невозможно
+		log.Fatalf("Ошибка при открытии подключения к БД: %v", err)
 	}
 
 	if err = DB.Ping(); err != nil {
-		log.Fatalf("БД недоступна: %v", err)
+		// Используем Fatalf, если база данных недоступна
+		log.Fatalf("БД недоступна (Ping failed): %v", err)
 	}
 	log.Println("Подключение к БД успешно")
 }
